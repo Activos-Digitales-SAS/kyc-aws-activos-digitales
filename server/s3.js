@@ -10,6 +10,9 @@ const {
   GetObjectCommand,
 } = require("@aws-sdk/client-s3");
 const fs = require('fs');
+const { pipeline } = require('stream');
+const { promisify } = require('util');
+const pipelineAsync = promisify(pipeline);
 
 const AWS_PUBLIC_KEY = process.env.AWS_PUBLIC_KEY;
 const AWS_SECRET_KEY = process.env.AWS_SECRET_KEY;
@@ -37,6 +40,23 @@ async function uploadFile(file) {
   return await client.send(command);
 }
 
+async function readFile(fileName) {
+  const command = new GetObjectCommand({
+    Bucket: AWS_BUCKET_NAME,
+    Key: fileName
+  });
+
+  const result = await client.send(command);
+
+  // Utilizamos pipeline para manejar el stream correctamente
+  await pipelineAsync(result.Body, fs.createWriteStream('./images/newimage.png'));
+
+  return result.Body;
+}
+
+
+
 module.exports = {
-  uploadFile
+  uploadFile,
+  readFile
 };

@@ -12,8 +12,11 @@ app.use(fileUpload({
     tempFileDir : './archivos'
 }));
 
+
+
 app.use(photosRoutes)
 
+app.use(express.static('images'))
 
 app.listen(3000)
 console.log(`Server Online en ${3000} `)
