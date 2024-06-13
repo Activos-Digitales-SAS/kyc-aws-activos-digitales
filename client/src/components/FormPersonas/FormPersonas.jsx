@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaFileUpload, FaFileAlt } from 'react-icons/fa';
+import Modal from 'react-modal';
 import styles from './FormPersonas.module.css';
+import modalStyles from './Modal.module.css';
+
+Modal.setAppElement('#root'); // Configurar el elemento raíz para el modal
 
 const FormPersonas = () => {
     const [post, setPost] = useState({
@@ -20,6 +24,12 @@ const FormPersonas = () => {
 
     const [cities, setCities] = useState([]);
     const [language, setLanguage] = useState('es'); // Estado para el idioma
+    const [modalIsOpen, setModalIsOpen] = useState(false);
+    const [acceptPolicies, setAcceptPolicies] = useState({
+        personalData: false,
+        fundsDeclaration: false,
+        riskManagement: false
+    });
 
     useEffect(() => {
         // Cargar ciudades
@@ -32,26 +42,35 @@ const FormPersonas = () => {
             });
     }, []);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
+        setModalIsOpen(true);
+    };
 
-        const formData = new FormData();
+    const handleModalSubmit = async () => {
+        if (Object.values(acceptPolicies).every(Boolean)) {
+            const formData = new FormData();
 
-        for (const key in post) {
-            if (post[key]) {
-                formData.append(key, post[key]);
-            }
-        }
-
-        try {
-            const response = await axios.post('http://localhost:3000/upload-personas', formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data"
+            for (const key in post) {
+                if (post[key]) {
+                    formData.append(key, post[key]);
                 }
-            });
-            console.log(response);
-        } catch (error) {
-            console.error('Error uploading files:', error);
+            }
+
+            try {
+                const response = await axios.post('http://localhost:3000/upload-personas', formData, {
+                    headers: {
+                        "Content-Type": "multipart/form-data"
+                    }
+                });
+                console.log(response);
+            } catch (error) {
+                console.error('Error uploading files:', error);
+            } finally {
+                setModalIsOpen(false);
+            }
+        } else {
+            alert('Please accept all policies before submitting.');
         }
     };
 
@@ -71,7 +90,6 @@ const FormPersonas = () => {
         setLanguage(prevLanguage => prevLanguage === 'es' ? 'en' : 'es');
     };
 
-    // Traducciones
     const translations = {
         es: {
             nombresCompletos: 'Nombres Completos',
@@ -88,6 +106,13 @@ const FormPersonas = () => {
             enviar: 'Enviar',
             selectFile: 'Seleccionar archivo',
             noFileSelected: 'Sin archivos seleccionados',
+            accept: 'Aceptar',
+            decline: 'No acepto',
+            policies: {
+                personalData: '¿Autoriza usted el tratamiento de sus datos personales?',
+                fundsDeclaration: 'Declaro expresamente que...',
+                riskManagement: '¿Está usted de acuerdo con la Política arriba mencionada?',
+            },
             options: {
                 tipoIdentificacion: [
                     { value: 'cc', label: 'Cédula de ciudadanía' },
@@ -114,6 +139,13 @@ const FormPersonas = () => {
             enviar: 'Submit',
             selectFile: 'Select file',
             noFileSelected: 'No files selected',
+            accept: 'Accept',
+            decline: 'Do not accept',
+            policies: {
+                personalData: 'Do you authorize the processing of your personal data?',
+                fundsDeclaration: 'I expressly declare that...',
+                riskManagement: 'Do you agree with the above-mentioned Policy?',
+            },
             options: {
                 tipoIdentificacion: [
                     { value: 'cc', label: 'Citizenship ID' },
@@ -214,6 +246,82 @@ const FormPersonas = () => {
                     {translations[language].enviar}
                 </button>
             </form>
+
+            <Modal isOpen={modalIsOpen} onRequestClose={() => setModalIsOpen(false)} className={modalStyles.modalContainer}>
+                <div className={modalStyles.modalHeader}>
+                    <h2 className={modalStyles.modalTitle}>{language === 'es' ? 'Políticas de Tratamiento de Datos' : 'Data Processing Policies'}</h2>
+                    <button className={modalStyles.closeButton} onClick={() => setModalIsOpen(false)}>&times;</button>
+                </div>
+                <div className={modalStyles.modalContent}>
+                    <p>A. 9. {language === 'es' ? 'Ley de tratamiento de datos personales' : 'Personal Data Treatment Law'}:</p>
+                    <p>{language === 'es' ? 'De conformidad con lo dispuesto en la Ley 1581 de 2012 y el Decreto 1377 de 2013, se desarrolla el principio constitucional que tienen todas las personas a conocer, actualizar, rectificar o suprimir la información que haya sido recolectada, almacenada y usada o que haya sido objeto de tratamiento de datos personales en bancos, en bases de datos y en general en archivos de entidades públicas y privadas.' : 'In accordance with the provisions of Law 1581 of 2012 and Decree 1377 of 2013, the constitutional principle that all persons have to know, update, rectify, or delete information that has been collected, stored, and used or that has been the subject of personal data processing in banks, databases, and in general in archives of public and private entities is developed.'}</p>
+                    {/* Rest of the policy content */}
+                    <p>{language === 'es' ? 'Autoriza usted el tratamiento de sus datos personales?' : 'Do you authorize the processing of your personal data?'}</p>
+                    <div className={modalStyles.checkboxContainer}>
+                        <input
+                            type="checkbox"
+                            checked={acceptPolicies.personalData}
+                            onChange={() => setAcceptPolicies(prev => ({ ...prev, personalData: !prev.personalData }))}
+                        />
+                        <label className={modalStyles.checkboxLabel}>{language === 'es' ? 'Sí autorizo' : 'I authorize'}</label>
+                    </div>
+                    <div className={modalStyles.checkboxContainer}>
+                        <input
+                            type="checkbox"
+                            checked={!acceptPolicies.personalData}
+                            onChange={() => setAcceptPolicies(prev => ({ ...prev, personalData: !prev.personalData }))}
+                        />
+                        <label className={modalStyles.checkboxLabel}>{language === 'es' ? 'No autorizo' : 'I do not authorize'}</label>
+                    </div>
+
+                    <p>B. 12. {language === 'es' ? 'Declaración de origen de fondos' : 'Declaration of Source of Funds'}:</p>
+                    <p>{language === 'es' ? 'Declaro expresamente que...' : 'I expressly declare that...'}</p>
+                    <div className={modalStyles.checkboxContainer}>
+                        <input
+                            type="checkbox"
+                            checked={acceptPolicies.fundsDeclaration}
+                            onChange={() => setAcceptPolicies(prev => ({ ...prev, fundsDeclaration: !prev.fundsDeclaration }))}
+                        />
+                        <label className={modalStyles.checkboxLabel}>{language === 'es' ? 'Sí acepto' : 'I accept'}</label>
+                    </div>
+                    <div className={modalStyles.checkboxContainer}>
+                        <input
+                            type="checkbox"
+                            checked={!acceptPolicies.fundsDeclaration}
+                            onChange={() => setAcceptPolicies(prev => ({ ...prev, fundsDeclaration: !prev.fundsDeclaration }))}
+                        />
+                        <label className={modalStyles.checkboxLabel}>{language === 'es' ? 'No acepto' : 'I do not accept'}</label>
+                    </div>
+
+                    <p>C. 14. {language === 'es' ? 'Política de gestión de riesgos LA/FT' : 'Risk Management Policy'}:</p>
+                    <p>{language === 'es' ? 'EL PROVEEDOR y/o CLIENTE se obliga a cumplir con la política de prevención y control del riesgo de lavado de activos y financiación del terrorismo adoptada por ACTIVOS DIGITALES S.A.S...' : 'The PROVIDER and/or CLIENT agrees to comply with the policy of prevention and control of money laundering and terrorist financing risk adopted by ACTIVOS DIGITALES S.A.S...'}</p>
+                    <p>{language === 'es' ? 'Está usted de acuerdo con la Política arriba mencionada?' : 'Do you agree with the above-mentioned Policy?'}</p>
+                    <div className={modalStyles.checkboxContainer}>
+                        <input
+                            type="checkbox"
+                            checked={acceptPolicies.riskManagement}
+                            onChange={() => setAcceptPolicies(prev => ({ ...prev, riskManagement: !prev.riskManagement }))}
+                        />
+                        <label className={modalStyles.checkboxLabel}>{language === 'es' ? 'Sí estoy de acuerdo' : 'I agree'}</label>
+                    </div>
+                    <div className={modalStyles.checkboxContainer}>
+                        <input
+                            type="checkbox"
+                            checked={!acceptPolicies.riskManagement}
+                            onChange={() => setAcceptPolicies(prev => ({ ...prev, riskManagement: !prev.riskManagement }))}
+                        />
+                        <label className={modalStyles.checkboxLabel}>{language === 'es' ? 'No estoy de acuerdo' : 'I do not agree'}</label>
+                    </div>
+                </div>
+                <div>
+                    <button className={`${modalStyles.button} ${modalStyles.acceptButton}`} onClick={handleModalSubmit}>
+                        {translations[language].enviar}
+                    </button>
+                    <button className={`${modalStyles.button} ${modalStyles.cancelButton}`} onClick={() => setModalIsOpen(false)}>
+                        {language === 'es' ? 'Cancelar' : 'Cancel'}
+                    </button>
+                </div>
+            </Modal>
         </div>
     );
 };
