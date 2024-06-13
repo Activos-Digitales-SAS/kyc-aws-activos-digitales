@@ -10,7 +10,7 @@ router.get('/', (req,res)=> res.send('welcome to server'))
 
 
 
-
+//primera funcion v 0.1
 /*
 router.post('/upload', async (req,res)=> {
 
@@ -21,6 +21,9 @@ router.post('/upload', async (req,res)=> {
     res.send('archivo subido')
 })
 */
+
+//segunda version v 0.2
+/*
 router.post('/upload-personas', async (req, res) => {
   if (!req.files || Object.keys(req.files).length === 0) {
       return res.status(400).send('No files were uploaded.');
@@ -47,6 +50,36 @@ router.post('/upload-personas', async (req, res) => {
 
   res.send('Archivos subidos');
 });
+*/
+
+//tercera version v 0.3
+router.post('/upload-personas', async (req, res) => {
+    if (!req.files || Object.keys(req.files).length === 0) {
+        return res.status(400).send('No files were uploaded.');
+    }
+
+    // Asegúrate de que los nombres coincidan con los del formulario
+    const ccPhotoPersonas = req.files.ccPhotoPersonas;
+    const rutPhotoPersonas = req.files.rutPhotoPersonas;
+
+    if (!ccPhotoPersonas) {
+        return res.status(400).send('No ccPhotoPersonas file uploaded.');
+    }
+
+    if (!rutPhotoPersonas) {
+        return res.status(400).send('No rutPhotoPersonas file uploaded.');
+    }
+
+    // Procesar la carga de los archivos
+    const resultCC = await uploadFile(ccPhotoPersonas);
+    const resultRUT = await uploadFile(rutPhotoPersonas);
+
+    console.log(resultCC);
+    console.log(resultRUT);
+
+    res.send('Archivos subidos');
+});
+
 
 
 router.post('/upload-juridicos', async (req, res) => {
