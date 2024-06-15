@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaFileUpload, FaFileAlt } from 'react-icons/fa';
+import { FaFileUpload } from 'react-icons/fa';
 import Modal from 'react-modal';
+import Swal from 'sweetalert2';
 import styles from './FormJuridicos.module.css';
 import modalStyles from './Modal.module.css';
 
-Modal.setAppElement('#root'); // Configurar el elemento raíz para el modal
+Modal.setAppElement('#root');
 
 const FormJuridicos = () => {
     const [post, setPost] = useState({
@@ -27,8 +28,18 @@ const FormJuridicos = () => {
         composicionAccionaria: null,
     });
 
+    const [imageUrls, setImageUrls] = useState({
+        ccPhotoUrl: '',
+        rutPhotoUrl: '',
+        camaraComercioUrl: '',
+        cedulaRepresentanteLegalUrl: '',
+        estadosFinancierosUrl: '',
+        certificadoBancarioUrl: '',
+        composicionAccionariaUrl: ''
+    });
+
     const [cities, setCities] = useState([]);
-    const [language, setLanguage] = useState('es'); // Estado para el idioma
+    const [language, setLanguage] = useState('es');
     const [modalIsOpen, setModalIsOpen] = useState(false);
     const [acceptPolicies, setAcceptPolicies] = useState({
         personalData: false,
@@ -37,7 +48,6 @@ const FormJuridicos = () => {
     });
 
     useEffect(() => {
-        // Cargar ciudades
         axios.get('https://api-colombia.com/api/v1/City')
             .then(response => {
                 setCities(response.data);
@@ -47,35 +57,110 @@ const FormJuridicos = () => {
             });
     }, []);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setModalIsOpen(true);
+
+        const formData = new FormData();
+        for (const key in post) {
+            if (post[key]) {
+                formData.append(key, post[key]);
+            }
+        }
+
+        try {
+            const uploadResponse = await axios.post('http://localhost:3000/upload-juridicos', formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data"
+                }
+            });
+
+            const {
+                ccPhotoUrl,
+                rutPhotoUrl,
+                camaraComercioUrl,
+                cedulaRepresentanteLegalUrl,
+                estadosFinancierosUrl,
+                certificadoBancarioUrl,
+                composicionAccionariaUrl
+            } = uploadResponse.data;
+
+            setImageUrls({
+                ccPhotoUrl,
+                rutPhotoUrl,
+                camaraComercioUrl,
+                cedulaRepresentanteLegalUrl,
+                estadosFinancierosUrl,
+                certificadoBancarioUrl,
+                composicionAccionariaUrl
+            });
+
+            localStorage.setItem('formDataJuridicos', JSON.stringify(post));
+            localStorage.setItem('imageUrlsJuridicos', JSON.stringify({
+                ccPhotoUrl,
+                rutPhotoUrl,
+                camaraComercioUrl,
+                cedulaRepresentanteLegalUrl,
+                estadosFinancierosUrl,
+                certificadoBancarioUrl,
+                composicionAccionariaUrl
+            }));
+
+            Swal.fire({
+                title: '¿Haz diligenciado tus datos correctamente?',
+                showCancelButton: true,
+                confirmButtonText: 'Continuar',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    setModalIsOpen(true);
+                }
+            });
+
+        } catch (error) {
+            console.error('Error uploading files:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Hubo un error al subir las imágenes.',
+            });
+        }
     };
 
     const handleModalSubmit = async () => {
         if (Object.values(acceptPolicies).every(Boolean)) {
-            const formData = new FormData();
+            const storedFormData = JSON.parse(localStorage.getItem('formDataJuridicos'));
+            const storedImageUrls = JSON.parse(localStorage.getItem('imageUrlsJuridicos'));
 
-            for (const key in post) {
-                if (post[key]) {
-                    formData.append(key, post[key]);
-                }
-            }
+            const finalData = {
+                ...storedFormData,
+                ...storedImageUrls
+            };
 
             try {
-                const response = await axios.post('http://localhost:3000/upload-juridicos', formData, {
-                    headers: {
-                        "Content-Type": "multipart/form-data"
-                    }
+                const saveResponse = await axios.post('http://localhost:3000/save-juridicos', finalData);
+                console.log(saveResponse.data);
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Éxito',
+                    text: 'Datos guardados correctamente.',
                 });
-                console.log(response);
+
             } catch (error) {
-                console.error('Error uploading files:', error);
+                console.error('Error saving data:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Hubo un error al guardar los datos.',
+                });
             } finally {
                 setModalIsOpen(false);
             }
         } else {
-            alert('Please accept all policies before submitting.');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Advertencia',
+                text: 'Por favor, acepte todas las políticas antes de enviar.',
+            });
         }
     };
 
